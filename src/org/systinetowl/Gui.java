@@ -95,7 +95,7 @@ public class Gui {
                                         updateButton.setEnabled(false);
                                     }
                                 });
-                                m.addArtifacts();
+                                m.importOWL();
                                 m.saveToFile(file);
                                 SwingUtilities.invokeLater(new Runnable() {
                                     @Override
@@ -136,7 +136,7 @@ public class Gui {
                                         updateButton.setEnabled(false);
                                     }
                                 });
-                                m.addArtifacts();
+                                m.importOWL();
                                 m.saveToFile(file);
                                 SwingUtilities.invokeLater(new Runnable() {
                                     @Override

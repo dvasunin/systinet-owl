@@ -26,12 +26,15 @@ import java.util.*;
  */
 public class Main {
 
-    //  Client stub to connect to the
+    //  Client stub to connect to the Systinet server
     private RepositoryClient repositoryClient;
     private Set<ArtifactBase> processedArtifacts = new HashSet<>();
     private Map<String, OWLNamedIndividual> processedIndividuals = new HashMap<>();
     private Map<String, OWLClass> owlClasses = new HashMap<>();
     private Map<String, OWLDataProperty> owlDataProperties = new HashMap<>();
+    // OWLAPI specific fields:
+    // Ontology namespace
+    private static String ontologyNamespace = "http://www.semanticweb.org/frank/ontologies/2014/5/systinetOntology";
     private OWLOntologyManager manager;
     private OWLOntology ontology;
     private IRI ontologyIRI;
@@ -41,15 +44,20 @@ public class Main {
     private OWLObjectProperty OBJECT_PROPERTY_INCOMING;
     private OWLObjectProperty OBJECT_PROPERTY_ADDRESS;
     private OWLObjectProperty OBJECT_PROPERTY_CATEGORY;
+    // Parent class for all Systinet OWL-classes
     private OWLClass parentClass;
+    // Parent class name;
+    private static String parentClassName = "SystinetRootClass";
+    // System console to print logging messages
     PrintStream console = System.out;
 
 
     /**
+     * Constructs an empty instance of the OWL importer
      *
-     * @param systinetURL
-     * @param user
-     * @param password
+     * @param systinetURL the URL of the Systinet server
+     * @param user username for the Systinet client to connect
+     * @param password password for the Systinet client
      * @throws URISyntaxException
      * @throws OWLOntologyCreationException
      */
@@ -57,48 +65,58 @@ public class Main {
         repositoryClient = RepositoryClientFactory.createRepositoryClient(
                 systinetURL, user, password, false, null, 0);
         manager = OWLManager.createOWLOntologyManager();
-        ontologyIRI = IRI.create("http://www.semanticweb.org/frank/ontologies/2014/5/systinetOntology");
+        ontologyIRI = IRI.create(ontologyNamespace);
         ontology = manager.createOntology(ontologyIRI);
         df = manager.getOWLDataFactory();
         pm = new DefaultPrefixManager(ontologyIRI.toString() + "#");
         OBJECT_PROPERTY_OUTGOING = df.getOWLObjectProperty("Outgoing", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_OUTGOING));
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_OUTGOING)));
         OBJECT_PROPERTY_INCOMING = df.getOWLObjectProperty("Incoming", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_INCOMING));
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_INCOMING)));
         OBJECT_PROPERTY_ADDRESS = df.getOWLObjectProperty("Address", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_ADDRESS));
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_ADDRESS)));
         OBJECT_PROPERTY_CATEGORY = df.getOWLObjectProperty("Category", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_CATEGORY));
-        parentClass = df.getOWLClass("SystinetRootClass", pm);
-        OWLDeclarationAxiom declarationAxiom = df.getOWLDeclarationAxiom(parentClass);
-        manager.addAxiom(ontology, declarationAxiom);
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_CATEGORY)));
+        parentClass = df.getOWLClass(parentClassName, pm);
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(parentClass)));
     }
 
+    /**
+     * Create an instance of the OWL importer for updates:
+     * the importer deletes all individuals from given ontology keeping all classes untouched
+     *
+     * @param systinetURL the URL of the Systinet server
+     * @param user username for the Systinet client to connect
+     * @param password password for the Systinet client
+     * @param file file with the ontology to update
+     * @throws URISyntaxException
+     * @throws OWLOntologyCreationException
+     */
     public Main(String systinetURL, String user, String password, File file) throws URISyntaxException, OWLOntologyCreationException {
         repositoryClient = RepositoryClientFactory.createRepositoryClient(
                 systinetURL, user, password, false, null, 0);
         manager = OWLManager.createOWLOntologyManager();
         loadFromFile(file);
+        //we set the IRI from the ontology file
         ontologyIRI = ontology.getOntologyID().getOntologyIRI();
         df = manager.getOWLDataFactory();
         pm = new DefaultPrefixManager(ontologyIRI.toString() + "#");
-
         OBJECT_PROPERTY_OUTGOING = df.getOWLObjectProperty("Outgoing", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_OUTGOING));
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_OUTGOING)));
         OBJECT_PROPERTY_INCOMING = df.getOWLObjectProperty("Incoming", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_INCOMING));
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_INCOMING)));
         OBJECT_PROPERTY_ADDRESS = df.getOWLObjectProperty("Address", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_ADDRESS));
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_ADDRESS)));
         OBJECT_PROPERTY_CATEGORY = df.getOWLObjectProperty("Category", pm);
-        manager.addAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_CATEGORY));
-        parentClass = df.getOWLClass("SystinetRootClass", pm);
-        OWLDeclarationAxiom declarationAxiom = df.getOWLDeclarationAxiom(parentClass);
-        manager.addAxiom(ontology, declarationAxiom);
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(OBJECT_PROPERTY_CATEGORY)));
+        parentClass = df.getOWLClass(parentClassName, pm);
+        manager.applyChange(new AddAxiom(ontology, df.getOWLDeclarationAxiom(parentClass)));
 
-
+        // here we save all classes from our ontology into the owlClasses hashmap
         for(OWLClass owlClass : ontology.getClassesInSignature()) {
             owlClasses.put(owlClass.getIRI().getFragment(), owlClass);
         }
+        // here we save all data properties from our ontology into the owlDataProperties hashmap
         for(OWLDataProperty owlDataProperty: ontology.getDataPropertiesInSignature()){
             owlDataProperties.put(owlDataProperty.getIRI().getFragment(), owlDataProperty);
         }
@@ -106,40 +124,63 @@ public class Main {
         deleteIndividuals();
     }
 
+    /**
+     * This method deletes all individuals from the ontology, including anonymous individuals
+     */
     public void deleteIndividuals(){
-        // delete individuals
         OWLEntityRemover remover = new OWLEntityRemover(manager, Collections.singleton(ontology));
-        for (OWLNamedIndividual ind : ontology.getIndividualsInSignature()) {
-            ind.accept(remover);
+        for (OWLNamedIndividual owlNamedIndividual : ontology.getIndividualsInSignature()) {
+            owlNamedIndividual.accept(remover);
         }
-
         Set<OWLAxiom> owlAxioms = new HashSet<>();
-        for (OWLAnonymousIndividual anonIndind : ontology.getReferencedAnonymousIndividuals()) {
-            for(OWLAxiom owlAxiom: ontology.getReferencingAxioms(anonIndind)){
+        for (OWLAnonymousIndividual owlAnonymousIndividual : ontology.getReferencedAnonymousIndividuals()) {
+            for(OWLAxiom owlAxiom: ontology.getReferencingAxioms(owlAnonymousIndividual)){
                 owlAxioms.add(owlAxiom);
             }
         }
         manager.removeAxioms(ontology, owlAxioms);
-
         manager.applyChanges(remover.getChanges());
-
     }
 
-    public void addArtifacts() {
+
+    /**
+     * Main method for the class: imports all artifacts from the Systinet repository
+     */
+    public void importOWL() {
         List<ArtifactBase> artifacts = repositoryClient.search(null, null, null, 0,  10000);
         for (ArtifactBase au : artifacts) {
             addArtifact(au.get_uuid().toString());
         }
     }
 
+    /**
+     * Saves imported ontology into the specified file
+     *
+     * @param file file where the ontology is saved to
+     * @throws FileNotFoundException
+     * @throws OWLOntologyStorageException
+     */
     public void saveToFile(File file) throws FileNotFoundException, OWLOntologyStorageException {
         manager.saveOntology(ontology, new BufferedOutputStream(new FileOutputStream(file)));
     }
 
+    /**
+     * Loads ontology from the specified file
+     *
+     * @param file file the ontology is loaded from
+     * @throws OWLOntologyCreationException
+     */
     public void loadFromFile(File file) throws OWLOntologyCreationException {
         ontology = manager.loadOntologyFromOntologyDocument(file);
     }
 
+    /**
+     * Method which import an artifact from Systinet repository given by its identifier into the ontology
+     * as an individual. The artifacts linked with that individual are imported too using recursion.
+     *
+     * @param au UUID of the Systinet Artifact to import
+     * @return the OWL individual associated with given artifact
+     */
     public OWLNamedIndividual addArtifact(String au) {
         ArtifactBase a = repositoryClient.getArtifact(au);
         OWLNamedIndividual individual = processedIndividuals.get(au);
@@ -344,7 +385,7 @@ public class Main {
                 //File f = new File("SystinetOntology.owl");
                 //OWLOntology ontology = manager.loadOntologyFromOntologyDocument(f);
                 m = new Main("http://systinet.local:8080/soa", "admin", "admin");
-                m.addArtifacts();
+                m.importOWL();
                 File file = chooser.getSelectedFile();
                 m.saveToFile(file);
             }
@@ -352,7 +393,7 @@ public class Main {
             File file = new File("SystinetOntology-updated.owl");
             m = new Main("http://systinet.local:8080/soa", "admin", "admin", file);
             //m.walk();
-            m.addArtifacts();
+            m.importOWL();
             m.saveToFile(file);
 
 
