@@ -183,12 +183,13 @@ public class Main {
      */
     public OWLNamedIndividual addArtifact(String au) {
         ArtifactBase a = repositoryClient.getArtifact(au);
+        // if an artifact was already processed then return it from hashmap
         OWLNamedIndividual individual = processedIndividuals.get(au);
         if(individual != null) {
             return individual;
         }
 
-        //System.out.println("SDM name: " + a.get_artifactSdmName());
+        console.println("SDM name: " + a.get_artifactSdmName());
         individual = df.getOWLNamedIndividual(au, pm);
 
         OWLClass sdmClass = owlClasses.get(a.get_artifactSdmName());
