@@ -175,6 +175,116 @@ public class Main {
     }
 
     /**
+     * Process a single property from Systinet and imports it ito ontology
+     *
+     * @param pd Systinet property descriptor
+     * @param pv Systinet property value
+     * @param individual OWL individual to import
+     */
+    private void processPropertyValue(PropertyDescriptor pd, PropertyValue pv, OWLIndividual individual) {
+        OWLAxiom owlAxiom = null;
+        if (pv instanceof Address) {
+            Address address = (Address) pv;
+            OWLAnonymousIndividual addressIndividual = df.getOWLAnonymousIndividual();
+
+            OWLDataProperty cityProperty = df.getOWLDataProperty("City", pm);
+            OWLDataPropertyAssertionAxiom cityPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(cityProperty, addressIndividual, address.getCity());
+
+            OWLDataProperty countryProperty = df.getOWLDataProperty("Country", pm);
+            OWLDataPropertyAssertionAxiom countryPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(countryProperty, addressIndividual, address.getCountry());
+
+            OWLDataProperty postalcodeProperty = df.getOWLDataProperty("Postalcode", pm);
+            OWLDataPropertyAssertionAxiom postalcodePropertyAssertion = df.getOWLDataPropertyAssertionAxiom(postalcodeProperty, addressIndividual, address.getPostalCode());
+
+            OWLDataProperty stateprovinceProperty = df.getOWLDataProperty("StateProvince", pm);
+            OWLDataPropertyAssertionAxiom stateProvincePropertyAssertion = df.getOWLDataPropertyAssertionAxiom(stateprovinceProperty, addressIndividual, address.getStateProvince());
+
+            owlAxiom = df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_ADDRESS, individual, addressIndividual);
+            manager.addAxiom(ontology, cityPropertyAssertion);
+            manager.addAxiom(ontology, countryPropertyAssertion);
+            manager.addAxiom(ontology, postalcodePropertyAssertion);
+            manager.addAxiom(ontology, stateProvincePropertyAssertion);
+        } else if (pv instanceof Category) {
+            Category category = (Category) pv;
+            OWLAnonymousIndividual categoryIndividual = df.getOWLAnonymousIndividual();
+            OWLDataProperty taxonomyURIDataProperty = df.getOWLDataProperty("taxonomyURI", pm);
+            OWLDataPropertyAssertionAxiom  taxonomyURIPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(taxonomyURIDataProperty, categoryIndividual, category.getTaxonomyURI());
+            OWLDataProperty nameDataProperty = df.getOWLDataProperty("name", pm);
+            OWLDataPropertyAssertionAxiom  namePropertyAssertion = df.getOWLDataPropertyAssertionAxiom(nameDataProperty, categoryIndividual, category.getName());
+            OWLDataProperty valDataProperty = df.getOWLDataProperty("val", pm);
+            OWLDataPropertyAssertionAxiom  valPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(valDataProperty, categoryIndividual, category.getVal());
+            OWLObjectProperty objProp =  df.getOWLObjectProperty(pd.getSdmName(), pm);
+            OWLSubObjectPropertyOfAxiom subObjectPropertyOfAxiom = df.getOWLSubObjectPropertyOfAxiom(objProp, OBJECT_PROPERTY_CATEGORY);
+
+
+            owlAxiom = df.getOWLObjectPropertyAssertionAxiom(objProp, individual, categoryIndividual);
+            manager.addAxiom(ontology, taxonomyURIPropertyAssertion);
+            manager.addAxiom(ontology, namePropertyAssertion);
+            manager.addAxiom(ontology, valPropertyAssertion);
+            manager.addAxiom(ontology, subObjectPropertyOfAxiom);
+        } else if (pv instanceof CategoryBag) {
+            CategoryBag categoryBag = (CategoryBag) pv;
+            console.println(pd.getSdmName() + " = ");
+            console.println("===========================");
+            console.println("CATEGORIES:");
+            for (Category category : categoryBag.getCategories()) {
+                console.println("\t name = " + category.getName());
+                console.println("\t val = " + category.getVal());
+                console.println("\t TaxonomyURI = " + category.getTaxonomyURI());
+                console.println("----------------------------");
+            }
+            console.println("===========================");
+            console.println("CATEGORY GROUPS:");
+            for (CategoryGroup categoryGroup : categoryBag.getCategoryGroups()) {
+                console.println("Taxonomy URI = " + categoryGroup.getTaxonomyURI());
+                console.println("CATEGORIES:");
+                for (Category category : categoryGroup.getCategories()) {
+                    console.println("\t name = " + category.getName());
+                    console.println("\t val = " + category.getVal());
+                    console.println("\t TaxonomyURI = " + category.getTaxonomyURI());
+                    console.println("----------------------------");
+                }
+            }
+
+        } else {
+            OWLDataProperty dataProperty = owlDataProperties.get(pd.getSdmName());
+            if (dataProperty == null) {
+                dataProperty = df.getOWLDataProperty(pd.getSdmName(), pm);
+                OWLDeclarationAxiom declarationAxiom = df.getOWLDeclarationAxiom(dataProperty);
+                OWLFunctionalDataPropertyAxiom functionalDataPropertyAxiom = df.getOWLFunctionalDataPropertyAxiom(dataProperty);
+                manager.addAxiom(ontology, declarationAxiom);
+                manager.addAxiom(ontology, functionalDataPropertyAxiom);
+                owlDataProperties.put(pd.getSdmName(), dataProperty);
+            }
+
+            if (pv instanceof StringProperty) {
+                owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((StringProperty) pv).getStringValue());
+            } else if (pv instanceof IntegerProperty) {
+                owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((SinglePropertyValue) pv).getIntegerValue());
+            } else if (pv instanceof BigIntegerProperty) {
+                OWLLiteral bigIntegerLiteral = df.getOWLTypedLiteral(((BigIntegerProperty) pv).getValue().toString(), OWL2Datatype.XSD_INTEGER);
+                owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, bigIntegerLiteral);
+            } else if (pv instanceof DateProperty) {
+                OWLLiteral dateLiteral = df.getOWLTypedLiteral(
+                        XMLGregorianCalendarConverter.asXMLGregorianCalendar(((DateProperty) pv).getDateValue()).toString(),
+                        OWL2Datatype.XSD_DATE_TIME);
+                owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, dateLiteral);
+            } else if (pv instanceof BooleanProperty) {
+                owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((BooleanProperty) pv).getBooleanValue());
+            } else if (pv instanceof DoubleProperty) {
+                owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((DoubleProperty) pv).getDoubleValue());
+            } else if (pv instanceof UuidProperty) {
+                owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((UuidProperty) pv).getValue().toString());
+            } else {
+                console.println(pd.getSdmName() + "\t=\t" + pv);
+            }
+        }
+        if (owlAxiom != null) {
+            manager.addAxiom(ontology, owlAxiom);
+        }
+    }
+
+    /**
      * Method which import an artifact from Systinet repository given by its identifier into the ontology
      * as an individual. The artifacts linked with that individual are imported too using recursion.
      *
@@ -222,117 +332,14 @@ public class Main {
         // iterate through all properties of a Systinet's artifact and add them as dataProperty of OWL individual
         for(PropertyDescriptor pd : a.getArtifactDescriptor().enumerateProperties()){
                 if (!pd.isRelationship()) {
-                    // + pd.getPropertyTypeDescriptor().getPropertyTypeClass().getSimpleName());
                     if(pd.getPropertyCardinality().isMultiple()){
-                        //System.out.print(pd.getSdmName() + " == ");
                         for(SinglePropertyValue sp : a.getMultiProperty(pd.getSdmName())){
-                            //System.out.print("\t" + sp.toString());
+                            processPropertyValue(pd, sp, individual);
                         }
-                        //System.out.println();
                     } else {
                         PropertyValue pv = a.getProperty(pd.getSdmName());
                         if(pv != null) {
-                            OWLAxiom owlAxiom = null;
-                            if (pv instanceof Address) {
-                                Address address = (Address) pv;
-                                OWLAnonymousIndividual addressIndividual = df.getOWLAnonymousIndividual();
-                                //OWLNamedIndividual addressIndividual =  df.getOWLNamedIndividual(IRI.create("http://www.semanticweb.org/frank/ontologies/2014/5/systinetOntology/address#" + au));
-
-                                OWLDataProperty cityProperty = df.getOWLDataProperty("City", pm);
-                                OWLDataPropertyAssertionAxiom cityPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(cityProperty, addressIndividual, address.getCity());
-
-                                OWLDataProperty countryProperty = df.getOWLDataProperty("Country", pm);
-                                OWLDataPropertyAssertionAxiom countryPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(countryProperty, addressIndividual, address.getCountry());
-
-                                OWLDataProperty postalcodeProperty = df.getOWLDataProperty("Postalcode", pm);
-                                OWLDataPropertyAssertionAxiom postalcodePropertyAssertion = df.getOWLDataPropertyAssertionAxiom(postalcodeProperty, addressIndividual, address.getPostalCode());
-
-                                OWLDataProperty stateprovinceProperty = df.getOWLDataProperty("StateProvince", pm);
-                                OWLDataPropertyAssertionAxiom stateProvincePropertyAssertion = df.getOWLDataPropertyAssertionAxiom(stateprovinceProperty, addressIndividual, address.getStateProvince());
-
-                                owlAxiom = df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_ADDRESS, individual, addressIndividual);
-                                manager.addAxiom(ontology, cityPropertyAssertion);
-                                manager.addAxiom(ontology, countryPropertyAssertion);
-                                manager.addAxiom(ontology, postalcodePropertyAssertion);
-                                manager.addAxiom(ontology, stateProvincePropertyAssertion);
-                            } else if (pv instanceof Category) {
-                                Category category = (Category) pv;
-                                OWLAnonymousIndividual categoryIndividual = df.getOWLAnonymousIndividual();
-                                OWLDataProperty taxonomyURIDataProperty = df.getOWLDataProperty("taxonomyURI", pm);
-                                OWLDataPropertyAssertionAxiom  taxonomyURIPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(taxonomyURIDataProperty, categoryIndividual, category.getTaxonomyURI());
-                                OWLDataProperty nameDataProperty = df.getOWLDataProperty("name", pm);
-                                OWLDataPropertyAssertionAxiom  namePropertyAssertion = df.getOWLDataPropertyAssertionAxiom(nameDataProperty, categoryIndividual, category.getName());
-                                OWLDataProperty valDataProperty = df.getOWLDataProperty("val", pm);
-                                OWLDataPropertyAssertionAxiom  valPropertyAssertion = df.getOWLDataPropertyAssertionAxiom(valDataProperty, categoryIndividual, category.getVal());
-                                OWLObjectProperty objProp =  df.getOWLObjectProperty(pd.getSdmName(), pm);
-                                OWLSubObjectPropertyOfAxiom subObjectPropertyOfAxiom = df.getOWLSubObjectPropertyOfAxiom(objProp, OBJECT_PROPERTY_CATEGORY);
-
-
-                                owlAxiom = df.getOWLObjectPropertyAssertionAxiom(objProp, individual, categoryIndividual);
-                                manager.addAxiom(ontology, taxonomyURIPropertyAssertion);
-                                manager.addAxiom(ontology, namePropertyAssertion);
-                                manager.addAxiom(ontology, valPropertyAssertion);
-                                manager.addAxiom(ontology, subObjectPropertyOfAxiom);
-                            } else if (pv instanceof CategoryBag) {
-                                CategoryBag categoryBag = (CategoryBag) pv;
-                                console.println(pd.getSdmName() + " = ");
-                                console.println("===========================");
-                                console.println("CATEGORIES:");
-                                for (Category category : categoryBag.getCategories()) {
-                                    console.println("\t name = " + category.getName());
-                                    console.println("\t val = " + category.getVal());
-                                    console.println("\t TaxonomyURI = " + category.getTaxonomyURI());
-                                    console.println("----------------------------");
-                                }
-                                console.println("===========================");
-                                console.println("CATEGORY GROUPS:");
-                                for (CategoryGroup categoryGroup : categoryBag.getCategoryGroups()) {
-                                    console.println("Taxonomy URI = " + categoryGroup.getTaxonomyURI());
-                                    console.println("CATEGORIES:");
-                                    for (Category category : categoryGroup.getCategories()) {
-                                        console.println("\t name = " + category.getName());
-                                        console.println("\t val = " + category.getVal());
-                                        console.println("\t TaxonomyURI = " + category.getTaxonomyURI());
-                                        console.println("----------------------------");
-                                    }
-                                }
-
-                            } else {
-                                OWLDataProperty dataProperty = owlDataProperties.get(pd.getSdmName());
-                                if (dataProperty == null) {
-                                    dataProperty = df.getOWLDataProperty(pd.getSdmName(), pm);
-                                    OWLDeclarationAxiom declarationAxiom = df.getOWLDeclarationAxiom(dataProperty);
-                                    OWLFunctionalDataPropertyAxiom functionalDataPropertyAxiom = df.getOWLFunctionalDataPropertyAxiom(dataProperty);
-                                    manager.addAxiom(ontology, declarationAxiom);
-                                    manager.addAxiom(ontology, functionalDataPropertyAxiom);
-                                    owlDataProperties.put(pd.getSdmName(), dataProperty);
-                                }
-
-                                if (pv instanceof StringProperty) {
-                                    owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((StringProperty) pv).getStringValue());
-                                } else if (pv instanceof IntegerProperty) {
-                                    owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((SinglePropertyValue) pv).getIntegerValue());
-                                } else if (pv instanceof BigIntegerProperty) {
-                                    OWLLiteral bigIntegerLiteral = df.getOWLTypedLiteral(((BigIntegerProperty) pv).getValue().toString(), OWL2Datatype.XSD_INTEGER);
-                                    owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, bigIntegerLiteral);
-                                } else if (pv instanceof DateProperty) {
-                                    OWLLiteral dateLiteral = df.getOWLTypedLiteral(
-                                            XMLGregorianCalendarConverter.asXMLGregorianCalendar(((DateProperty) pv).getDateValue()).toString(),
-                                            OWL2Datatype.XSD_DATE_TIME);
-                                    owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, dateLiteral);
-                                } else if (pv instanceof BooleanProperty) {
-                                    owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((BooleanProperty) pv).getBooleanValue());
-                                } else if (pv instanceof DoubleProperty) {
-                                    owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((DoubleProperty) pv).getDoubleValue());
-                                } else if (pv instanceof UuidProperty) {
-                                    owlAxiom = df.getOWLDataPropertyAssertionAxiom(dataProperty, individual, ((UuidProperty) pv).getValue().toString());
-                                } else {
-                                    console.println(pd.getSdmName() + "\t=\t" + pv);
-                                }
-                            }
-                            if (owlAxiom != null) {
-                                manager.addAxiom(ontology, owlAxiom);
-                            }
+                           processPropertyValue(pd, pv, individual);
                         }
                     }
                 }
@@ -341,17 +348,23 @@ public class Main {
         for (Relation r : a.getRelations()) {
             if (r.isOutgoing()) {
                 OWLIndividual targetIndividual = addArtifact(r.getTargetId().toString());
-                OWLObjectPropertyAssertionAxiom assertion = df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_OUTGOING, individual, targetIndividual);
-                manager.addAxiom(ontology, assertion);
+                manager.applyChange(new AddAxiom(ontology,
+                        df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_OUTGOING,
+                                individual,
+                                targetIndividual)));
             } else if (r.isIncoming()){
                 OWLIndividual sourceIndividual = addArtifact(r.getSourceId().toString());
-                OWLObjectPropertyAssertionAxiom assertion = df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_INCOMING, individual, sourceIndividual);
-                manager.addAxiom(ontology, assertion);
+                manager.applyChange(new AddAxiom(ontology,
+                        df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_INCOMING,
+                                individual,
+                                sourceIndividual)));
             }
         }
         return individual;
     }
 
+
+/* Never used, just a snipplet
     public void walk(){
         OWLOntologyWalker walker =
                 new OWLOntologyWalker(Collections.singleton(ontology));
@@ -370,26 +383,11 @@ public class Main {
 // Have the walker walk...
         walker.walkStructure(visitor);
     }
-
+*/
 
     public static void main(String[] args) {
         Main m = null;
-        try { /*
-            JFileChooser chooser = new JFileChooser();
-            FileNameExtensionFilter filter = new FileNameExtensionFilter(
-                    "OWL files", "owl");
-            chooser.setFileFilter(filter);
-            int returnVal = chooser.showSaveDialog(null);
-            if (returnVal == JFileChooser.APPROVE_OPTION) {
-                //OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
-                //File f = new File("SystinetOntology.owl");
-                //OWLOntology ontology = manager.loadOntologyFromOntologyDocument(f);
-                m = new Main("http://systinet.local:8080/soa", "admin", "admin");
-                m.importOWL();
-                File file = chooser.getSelectedFile();
-                m.saveToFile(file);
-            }
-             */
+        try {
             File file = new File("SystinetOntology-updated.owl");
             m = new Main("http://systinet.local:8080/soa", "admin", "admin", file);
             //m.walk();
