@@ -189,38 +189,37 @@ public class Main {
             return individual;
         }
 
-        console.println("SDM name: " + a.get_artifactSdmName());
-        individual = df.getOWLNamedIndividual(au, pm);
+        console.println("INDIVIDUAL: " + au);
+        console.println("CLASS: " + a.get_artifactSdmName());
 
+        individual = df.getOWLNamedIndividual(au, pm);
+        // try to get OWL class for the artifact from hashmap. If it is not there then create a new one
         OWLClass sdmClass = owlClasses.get(a.get_artifactSdmName());
         if(sdmClass == null) {
             sdmClass = df.getOWLClass(a.get_artifactSdmName(), pm);
             OWLDeclarationAxiom declarationAxiom = df.getOWLDeclarationAxiom(sdmClass);
-            OWLAxiom axiom = df.getOWLSubClassOfAxiom(sdmClass, parentClass);
-            manager.addAxiom(ontology, declarationAxiom);
-            manager.addAxiom(ontology, axiom);
+            OWLAxiom subClassOfAxiom = df.getOWLSubClassOfAxiom(sdmClass, parentClass);
+            // declare new class for the instance (can be skipped if declaration is not needed)
+            manager.applyChange(new AddAxiom(ontology, declarationAxiom));
+            // add an axiom to the ontology saying that our class is a subclass of parentClass
+            manager.applyChange(new AddAxiom(ontology, subClassOfAxiom));
+            //save class in a hashmap for further use
             owlClasses.put(a.get_artifactSdmName(), sdmClass);
         }
-
+        // individual is an instance of sdmClass
         OWLClassAssertionAxiom classAssertion = df.getOWLClassAssertionAxiom(sdmClass, individual);
         manager.addAxiom(ontology, classAssertion);
-
-        OWLLiteral lbl = df.getOWLLiteral(au + " - " + a.get_artifactSdmName());
+        // let's annotate individual with a fancy name
+        OWLLiteral lbl = df.getOWLLiteral(((StringProperty) a.getProperty("name")).getStringValue() + " - " + au);
         OWLAnnotation label =
                 df.getOWLAnnotation(
                         df.getOWLAnnotationProperty(OWLRDFVocabulary.RDFS_LABEL.getIRI()), lbl);
         OWLAxiom axiom = df.getOWLAnnotationAssertionAxiom(individual.asOWLNamedIndividual().getIRI(), label);
         manager.applyChange(new AddAxiom(ontology, axiom));
+        // add individual to the hashmap
         processedIndividuals.put(au, individual);
-            //IRI ontologyIRI = getFactory().getOwlOntology().getOntologyID().getOntologyIRI();
-            //PrefixManager pm = new DefaultPrefixManager(ontologyIRI.toString());
-            //OWLDataProperty hasName = getFactory().getOwlOntology().getOWLOntologyManager().getOWLDataFactory().getOWLDataProperty("#hasName", pm);
-        //OWLDataPropertyAssertionAxiom dataPropertyAssertion = getFactory().getOwlOntology().getOWLOntologyManager().getOWLDataFactory()
-        //            .getOWLDataPropertyAssertionAxiom(Vocabulary.DATA_PROPERTY_HASNAME, individual, a.getName());
-        //System.out.println("Adding axiom: " + individual + " #hasName " + a.getName());
-        //getFactory().getOwlOntology().getOWLOntologyManager().addAxiom(getFactory().getOwlOntology(), dataPropertyAssertion);
 
-
+        // iterate through all properties of a Systinet's artifact and add them as dataProperty of OWL individual
         for(PropertyDescriptor pd : a.getArtifactDescriptor().enumerateProperties()){
                 if (!pd.isRelationship()) {
                     // + pd.getPropertyTypeDescriptor().getPropertyTypeClass().getSimpleName());
