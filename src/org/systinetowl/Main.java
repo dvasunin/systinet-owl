@@ -12,8 +12,6 @@ import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.util.DefaultPrefixManager;
 import org.semanticweb.owlapi.util.OWLEntityRemover;
-import org.semanticweb.owlapi.util.OWLOntologyWalker;
-import org.semanticweb.owlapi.util.OWLOntologyWalkerVisitor;
 import org.semanticweb.owlapi.vocab.OWL2Datatype;
 import org.semanticweb.owlapi.vocab.OWLRDFVocabulary;
 
@@ -50,7 +48,7 @@ public class Main {
     private static String parentClassName = "SystinetRootClass";
     // System console to print logging messages
     PrintStream console = System.out;
-
+    private String systinetUri;
 
     /**
      * Constructs an empty instance of the OWL importer
@@ -62,6 +60,7 @@ public class Main {
      * @throws OWLOntologyCreationException
      */
     public Main(String systinetURL, String user, String password) throws URISyntaxException, OWLOntologyCreationException {
+        this.systinetUri = systinetURL;
         repositoryClient = RepositoryClientFactory.createRepositoryClient(
                 systinetURL, user, password, false, null, 0);
         manager = OWLManager.createOWLOntologyManager();
@@ -93,6 +92,7 @@ public class Main {
      * @throws OWLOntologyCreationException
      */
     public Main(String systinetURL, String user, String password, File file) throws URISyntaxException, OWLOntologyCreationException {
+        this.systinetUri = systinetURL;
         repositoryClient = RepositoryClientFactory.createRepositoryClient(
                 systinetURL, user, password, false, null, 0);
         manager = OWLManager.createOWLOntologyManager();
@@ -320,12 +320,19 @@ public class Main {
         OWLClassAssertionAxiom classAssertion = df.getOWLClassAssertionAxiom(sdmClass, individual);
         manager.addAxiom(ontology, classAssertion);
         // let's annotate individual with a fancy name
-        OWLLiteral lbl = df.getOWLLiteral(((StringProperty) a.getProperty("name")).getStringValue() + " - " + au);
-        OWLAnnotation label =
-                df.getOWLAnnotation(
-                        df.getOWLAnnotationProperty(OWLRDFVocabulary.RDFS_LABEL.getIRI()), lbl);
-        OWLAxiom axiom = df.getOWLAnnotationAssertionAxiom(individual.asOWLNamedIndividual().getIRI(), label);
-        manager.applyChange(new AddAxiom(ontology, axiom));
+        manager.applyChange(new AddAxiom(ontology,
+                df.getOWLAnnotationAssertionAxiom(individual.asOWLNamedIndividual().getIRI(),
+                        df.getOWLAnnotation(
+                                df.getOWLAnnotationProperty(OWLRDFVocabulary.RDFS_LABEL.getIRI()),
+                                df.getOWLLiteral(((StringProperty) a.getProperty("name")).getStringValue()
+                                        + " - " + au)))));
+        manager.applyChange(new AddAxiom(ontology,
+                df.getOWLAnnotationAssertionAxiom(individual.asOWLNamedIndividual().getIRI(),
+                        df.getOWLAnnotation(
+                                df.getOWLAnnotationProperty(OWLRDFVocabulary.RDFS_SEE_ALSO.getIRI()),
+                                df.getOWLLiteral(systinetUri + "/web/service-catalog/artifact/" + au,
+                                        OWL2Datatype.XSD_ANY_URI)))));
+
         // add individual to the hashmap
         processedIndividuals.put(au, individual);
 
