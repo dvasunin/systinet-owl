@@ -251,9 +251,9 @@ public class Main {
             if (dataProperty == null) {
                 dataProperty = df.getOWLDataProperty(pd.getSdmName(), pm);
                 OWLDeclarationAxiom declarationAxiom = df.getOWLDeclarationAxiom(dataProperty);
-                OWLFunctionalDataPropertyAxiom functionalDataPropertyAxiom = df.getOWLFunctionalDataPropertyAxiom(dataProperty);
+                //OWLFunctionalDataPropertyAxiom functionalDataPropertyAxiom = df.getOWLFunctionalDataPropertyAxiom(dataProperty);
                 manager.addAxiom(ontology, declarationAxiom);
-                manager.addAxiom(ontology, functionalDataPropertyAxiom);
+                //manager.addAxiom(ontology, functionalDataPropertyAxiom);
                 owlDataProperties.put(pd.getSdmName(), dataProperty);
             }
 
