@@ -26,10 +26,10 @@ public class Main {
 
     //  Client stub to connect to the Systinet server
     private RepositoryClient repositoryClient;
-    private Set<ArtifactBase> processedArtifacts = new HashSet<>();
-    private Map<String, OWLNamedIndividual> processedIndividuals = new HashMap<>();
-    private Map<String, OWLClass> owlClasses = new HashMap<>();
-    private Map<String, OWLDataProperty> owlDataProperties = new HashMap<>();
+    private Set<ArtifactBase> processedArtifacts = new HashSet<ArtifactBase>();
+    private Map<String, OWLNamedIndividual> processedIndividuals = new HashMap<String, OWLNamedIndividual>();
+    private Map<String, OWLClass> owlClasses = new HashMap<String, OWLClass>();
+    private Map<String, OWLDataProperty> owlDataProperties = new HashMap<String, OWLDataProperty>();
     // OWLAPI specific fields:
     // Ontology namespace
     private static String ontologyNamespace = "http://www.semanticweb.org/frank/ontologies/2014/5/systinetOntology";
@@ -132,7 +132,7 @@ public class Main {
         for (OWLNamedIndividual owlNamedIndividual : ontology.getIndividualsInSignature()) {
             owlNamedIndividual.accept(remover);
         }
-        Set<OWLAxiom> owlAxioms = new HashSet<>();
+        Set<OWLAxiom> owlAxioms = new HashSet<OWLAxiom>();
         for (OWLAnonymousIndividual owlAnonymousIndividual : ontology.getReferencedAnonymousIndividuals()) {
             for(OWLAxiom owlAxiom: ontology.getReferencingAxioms(owlAnonymousIndividual)){
                 owlAxioms.add(owlAxiom);
