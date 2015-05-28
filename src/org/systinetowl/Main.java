@@ -293,6 +293,9 @@ public class Main {
      */
     public OWLNamedIndividual addArtifact(String au) {
         ArtifactBase a = repositoryClient.getArtifact(au);
+        // check if the artifact with given name does really exists
+        if(a == null)
+            return null;
         // if an artifact was already processed then return it from hashmap
         OWLNamedIndividual individual = processedIndividuals.get(au);
         if(individual != null) {
@@ -355,16 +358,20 @@ public class Main {
         for (Relation r : a.getRelations()) {
             if (r.isOutgoing()) {
                 OWLIndividual targetIndividual = addArtifact(r.getTargetId().toString());
-                manager.applyChange(new AddAxiom(ontology,
-                        df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_OUTGOING,
-                                individual,
-                                targetIndividual)));
+                if (targetIndividual != null) {
+                    manager.applyChange(new AddAxiom(ontology,
+                            df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_OUTGOING,
+                                    individual,
+                                    targetIndividual)));
+                }
             } else if (r.isIncoming()){
                 OWLIndividual sourceIndividual = addArtifact(r.getSourceId().toString());
-                manager.applyChange(new AddAxiom(ontology,
-                        df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_INCOMING,
-                                individual,
-                                sourceIndividual)));
+                if (sourceIndividual != null) {
+                    manager.applyChange(new AddAxiom(ontology,
+                            df.getOWLObjectPropertyAssertionAxiom(OBJECT_PROPERTY_INCOMING,
+                                    individual,
+                                    sourceIndividual)));
+                }
             }
         }
         return individual;
