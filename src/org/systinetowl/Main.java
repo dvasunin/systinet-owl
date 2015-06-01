@@ -3,6 +3,7 @@ package org.systinetowl;
 import com.hp.systinet.repository.remote.client.RepositoryClient;
 import com.hp.systinet.repository.remote.client.impl.RepositoryClientFactory;
 import com.hp.systinet.repository.sdm.ArtifactBase;
+import com.hp.systinet.repository.sdm.desc.ArtifactDescriptor;
 import com.hp.systinet.repository.sdm.desc.PropertyDescriptor;
 import com.hp.systinet.repository.sdm.properties.PropertyValue;
 import com.hp.systinet.repository.sdm.properties.Relation;
@@ -150,6 +151,23 @@ public class Main {
         List<ArtifactBase> artifacts = repositoryClient.search(null, null, null, 0,  10000);
         for (ArtifactBase au : artifacts) {
             addArtifact(au.get_uuid().toString());
+        }
+    }
+
+    public void importOWL1() {
+        List<ArtifactDescriptor> artifactDescriptors =
+                repositoryClient.getArtifactRegistry().enumerateArtifactDescriptors();
+        List<String> artifactTypes = new ArrayList<String>(artifactDescriptors.size());
+        for (ArtifactDescriptor artifactDescriptor : artifactDescriptors) {
+            artifactTypes.add(artifactDescriptor.getSdmName());
+        }
+        // sort and print the output
+        String[] sorted = artifactTypes.toArray(new String[artifactTypes.size()]);
+        Arrays.sort(sorted);
+        System.out.println("There are following artifact types: ");
+        for (String s : sorted) {
+            System.out.println("   "+s);
+            //enumerateArtifactProperties(s);
         }
     }
 
@@ -411,7 +429,7 @@ public class Main {
 
         } catch (Exception e) {
             e.printStackTrace();
-        };
+        }
     }
 
 

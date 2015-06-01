@@ -171,6 +171,7 @@ public class Gui {
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Gui");
+        System.out.println(frame);
         frame.setContentPane(new Gui().main);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
